@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Senha — Minhas Finanças</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#181c27;--bg3:#1e2333;--bg4:#252b3b;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#f0f2f8;--text2:#8b90a7;--text3:#545870;
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.12);--green-border:rgba(34,197,94,0.25);
+  --red:#f87171;--red-bg:rgba(248,113,113,0.12);
+  --accent:#6366f1;--accent2:#818cf8;--accent-bg:rgba(99,102,241,0.15);
+  --radius:14px;--radius-sm:9px;
+  --shadow:0 4px 24px rgba(0,0,0,0.35);
+  --font:'Plus Jakarta Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+
+/* LOADER */
+#page-loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
+.loader-spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-txt{font-size:14px;color:var(--text3);font-weight:500}
+
+/* TOAST */
+#toast{display:none;position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:600;white-space:nowrap;background:var(--green);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.25)}
+#toast.err{background:var(--red)}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:32px 28px;width:100%;max-width:400px;box-shadow:var(--shadow)}
+.card-logo{font-size:32px;text-align:center;margin-bottom:8px}
+.card-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
+.card-title span{color:var(--accent2)}
+.card-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:28px;line-height:1.6}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.04em}
+.field input{height:48px;padding:0 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:15px;outline:none;transition:border-color 0.18s;width:100%}
+.field input:focus{border-color:var(--accent)}
+.field input::placeholder{color:var(--text3)}
+
+.btn{width:100%;height:50px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:background 0.18s,transform 0.1s;margin-top:6px}
+.btn:active{transform:scale(0.98)}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+
+.err-box{background:var(--red-bg);border:1px solid rgba(248,113,113,0.25);color:var(--red);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.err-box.visible{display:block}
+
+.success-box{display:none;text-align:center;padding:16px 0}
+.success-icon{font-size:48px;margin-bottom:12px}
+.success-title{font-size:18px;font-weight:700;margin-bottom:8px;color:var(--green)}
+.success-sub{font-size:14px;color:var(--text2);line-height:1.6}
+
+.link-btn{background:none;border:none;color:var(--accent2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;width:100%;text-align:center;margin-top:14px;display:block;padding:0}
+.link-btn:hover{opacity:0.75}
+
+/* Estado inválido (link expirado) */
+#invalid-box{display:none;text-align:center;padding:8px 0}
+.invalid-icon{font-size:48px;margin-bottom:12px}
+.invalid-title{font-size:18px;font-weight:700;margin-bottom:8px;color:var(--red)}
+.invalid-sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<div id="page-loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-txt">Verificando link de recuperação...</div>
+</div>
+
+<div id="toast"></div>
+
+<div class="card">
+  <div class="card-logo">🔐</div>
+  <div class="card-title">Minhas <span>Finanças</span></div>
+
+  <!-- FORMULÁRIO -->
+  <div id="reset-form">
+    <div class="card-sub">Crie sua nova senha abaixo.</div>
+    <div id="form-err" class="err-box"></div>
+    <div class="field">
+      <label>NOVA SENHA</label>
+      <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label>CONFIRMAR NOVA SENHA</label>
+      <input type="password" id="new-pass2" placeholder="Repita a nova senha" autocomplete="new-password">
+    </div>
+    <button class="btn" id="btn-reset" onclick="doReset()">Salvar nova senha</button>
+  </div>
+
+  <!-- SUCESSO -->
+  <div id="success-box" class="success-box">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Senha atualizada!</div>
+    <div class="success-sub">Sua senha foi alterada com sucesso.<br>Redirecionando para o login...</div>
+  </div>
+
+  <!-- LINK INVÁLIDO / EXPIRADO -->
+  <div id="invalid-box">
+    <div class="invalid-icon">⚠️</div>
+    <div class="invalid-title">Link inválido ou expirado</div>
+    <div class="invalid-sub">Este link de recuperação não é mais válido. Solicite um novo na tela de login.</div>
+    <button class="btn" onclick="goLogin()">Voltar para o login</button>
+  </div>
+</div>
+
+<script>
+const SUPA_URL='https://vtdfgfbscloefzvvfuwi.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0ZGZnZmJzY2xvZWZ6dnZmdXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MDIyOTYsImV4cCI6MjA5Mzk3ODI5Nn0.-2BgoHEJ4ih93ePRQiVkf_Q0uAVKp6M8NuMGYHIKF38';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+function showToast(msg,err=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=err?'err':'';el.style.display='block';
+  setTimeout(()=>el.style.display='none',3000);
+}
+
+function showErr(msg){
+  const el=document.getElementById('form-err');
+  el.textContent=msg;el.classList.add('visible');
+}
+
+function goLogin(){
+  window.location.href='./minhas-financas.html';
+}
+
+async function doReset(){
+  const pass=document.getElementById('new-pass').value;
+  const pass2=document.getElementById('new-pass2').value;
+  if(!pass||pass.length<6){showErr('A senha deve ter pelo menos 6 caracteres.');return}
+  if(pass!==pass2){showErr('As senhas não coincidem.');return}
+  const btn=document.getElementById('btn-reset');
+  btn.disabled=true;btn.textContent='Salvando...';
+  const {error}=await sb.auth.updateUser({password:pass});
+  if(error){
+    btn.disabled=false;btn.textContent='Salvar nova senha';
+    showErr('Erro ao atualizar: '+error.message);return;
+  }
+  // Sucesso
+  document.getElementById('reset-form').style.display='none';
+  document.getElementById('success-box').style.display='block';
+  showToast('Senha atualizada com sucesso!');
+  setTimeout(()=>goLogin(),3000);
+}
+
+// ── INIT: verifica se chegou com sessão válida do link do email ──
+(async()=>{
+  // O Supabase injeta o token na URL como hash (#access_token=...)
+  // O cliente JS processa isso automaticamente ao inicializar
+  const {data:{session},error}=await sb.auth.getSession();
+  document.getElementById('page-loader').style.display='none';
+
+  if(!session){
+    // Sem sessão = link expirado ou inválido
+    document.getElementById('reset-form').style.display='none';
+    document.getElementById('invalid-box').style.display='block';
+  }
+  // Se tem sessão, o formulário já está visível por padrão
+})();
+</script>
+</body>
+</html>
