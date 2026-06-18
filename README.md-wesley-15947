@@ -1,1 +1,45 @@
+Sistema de Controle Financeiro
 
+Autor
+
+Wesley Jesus de Souza Campos - 15947
+
+Descrição do Projeto
+
+O Sistema de Controle Financeiro foi desenvolvido com o objetivo de auxiliar usuários no gerenciamento de suas finanças pessoais, permitindo o controle de receitas, despesas e acompanhamento de gastos.
+
+Funcionalidades
+
+- Cadastro de receitas e despesas
+- Controle de gastos por categoria
+- Cálculo de saldo financeiro
+- Estatísticas financeiras
+- Recuperação de senha
+- Backup e restauração de dados
+
+Tecnologias Utilizadas
+
+- HTML5
+- CSS3
+- JavaScript
+- Git
+- GitHub
+- Netlify
+
+Acesso ao Projeto
+
+Sistema Online
+
+https://minhafinancia.netlify.app/
+
+Repositório GitHub
+
+https://github.com/wesleyyis/controle-financeiro
+
+Objetivo Acadêmico
+
+Este projeto foi desenvolvido como atividade acadêmica para aplicação dos conceitos de desenvolvimento web, versionamento de código com Git e GitHub, além da publicação de aplicações utilizando a plataforma Netlify.
+
+Data
+
+2026
