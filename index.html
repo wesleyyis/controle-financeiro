@@ -219,6 +219,61 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .chart-card.full{grid-column:1}
   .form-row{flex-direction:column}
 }
+/* ── BOTÃO INSTALAR PWA ── */
+#pwa-install-bar {
+  display: none;
+  position: fixed;
+  bottom: calc(var(--nav-h) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  width: calc(100% - 32px);
+  max-width: 480px;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow: 0 8px 32px rgba(99,102,241,0.45);
+  display: none;
+  align-items: center;
+  gap: 14px;
+  animation: slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+}
+#pwa-install-bar.show { display: flex; }
+.pwa-icon { font-size: 28px; flex-shrink: 0; }
+.pwa-text { flex: 1; }
+.pwa-text strong { display: block; font-size: 15px; font-weight: 800; color: #fff; }
+.pwa-text span   { font-size: 13px; color: rgba(255,255,255,0.75); font-weight: 500; }
+.pwa-btn-install {
+  background: #fff;
+  color: #6366f1;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pwa-btn-close {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -968,6 +1023,56 @@ async function loadAllData(){
     }
   });
 })();
+// ── BOTÃO DE INSTALAÇÃO PWA ──
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Impede o mini-infobar padrão do Chrome
+  e.preventDefault();
+  deferredPrompt = e;
+  // Mostra nossa barra personalizada
+  document.getElementById('pwa-install-bar').classList.add('show');
+});
+
+document.getElementById('pwa-btn-install').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  // Dispara o prompt de instalação nativo
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('pwa-install-bar').classList.remove('show');
+  }
+  deferredPrompt = null;
+});
+
+// Se o app já foi instalado, esconde a barra
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwa-install-bar').classList.remove('show');
+  deferredPrompt = null;
+});
+
+function fecharBarraPWA() {
+  document.getElementById('pwa-install-bar').classList.remove('show');
+  // Não mostra de novo por 3 dias
+  localStorage.setItem('pwa_fechado', Date.now());
+}
+
+// Não mostra se fechou nos últimos 3 dias
+const fechado = localStorage.getItem('pwa_fechado');
+if (fechado && Date.now() - Number(fechado) < 3 * 24 * 60 * 60 * 1000) {
+  // Bloqueia o evento antes de acontecer
+  window.addEventListener('beforeinstallprompt', (e) => e.preventDefault(), { once: true });
+}
 </script>
+<!-- BARRA DE INSTALAÇÃO PWA -->
+<div id="pwa-install-bar">
+  <div class="pwa-icon">📲</div>
+  <div class="pwa-text">
+    <strong>Instalar o app</strong>
+    <span>Acesse mais rápido pela tela inicial</span>
+  </div>
+  <button class="pwa-btn-install" id="pwa-btn-install">Instalar</button>
+  <button class="pwa-btn-close" onclick="fecharBarraPWA()">✕</button>
+</div>
 </body>
 </html>
