@@ -579,14 +579,24 @@ function showLogin(){
   document.getElementById('auth-err').classList.remove('visible');
 }
 function showAuthErr(msg){const el=document.getElementById('auth-err');el.textContent=msg;el.classList.add('visible')}
+
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
   if(!email||!pass){showAuthErr('Preencha email e senha.');return}
-  const btn=document.getElementById('btn-login');btn.disabled=true;btn.textContent='Entrando...';
+  const btn=document.getElementById('btn-login');
+  btn.disabled=true;btn.textContent='Entrando...';
+
+  // ── FIX BUG 1: limpa qualquer sessão/token antigo antes de logar ──
+  try{ await sb.auth.signOut(); }catch(_){}
+
   const {error}=await sb.auth.signInWithPassword({email,password:pass});
   btn.disabled=false;btn.textContent='Entrar';
-  if(error){showAuthErr('Email ou senha incorretos.');}
+  if(error){
+    // Se ainda falhar, limpa localStorage de auth e tenta avisar o usuário
+    Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
+    showAuthErr('Email ou senha incorretos. Se o problema persistir, use "Esqueceu a senha?" para redefinir.');
+  }
 }
 async function doSignup(){
   const email=document.getElementById('signup-email').value.trim();
@@ -1185,8 +1195,20 @@ async function loadAllData(){
 
 // ── INIT ──
 (async()=>{
-  const {data:{session}}=await sb.auth.getSession();
+  // ── FIX BUG 2: tenta recuperar sessão com tratamento de erro ──
+  let session = null;
+  try {
+    const {data, error} = await sb.auth.getSession();
+    if(error) throw error;
+    session = data.session;
+  } catch(e) {
+    // Sessão corrompida — limpa tudo e força tela de login limpa
+    Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
+    session = null;
+  }
+
   document.getElementById('app-loader').style.display='none';
+
   if(session){
     currentUser=session.user;
     const saved=localStorage.getItem('fin_cfg_'+currentUser.id);
@@ -1198,8 +1220,12 @@ async function loadAllData(){
   } else {
     document.getElementById('auth-screen').classList.add('visible');
   }
+
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session){
+    // ── FIX BUG 3: trata todos os eventos relevantes ──
+    if(event==='SIGNED_IN' && session){
+      // Evita recarregar dados se já estava logado com o mesmo usuário
+      if(currentUser && currentUser.id === session.user.id) return;
       currentUser=session.user;
       const saved=localStorage.getItem('fin_cfg_'+currentUser.id);
       if(saved) cfg=JSON.parse(saved);
@@ -1208,9 +1234,29 @@ async function loadAllData(){
       document.getElementById('main-app').classList.add('visible');
       await loadAllData();
     }
-    if(event==='SIGNED_OUT'){
+
+    if(event==='PASSWORD_RECOVERY'){
+      // Usuário veio do link de recuperação — fica na tela de login
+      // (a atualização acontece no atualizar-senha.html)
       document.getElementById('main-app').classList.remove('visible');
       document.getElementById('auth-screen').classList.add('visible');
+    }
+
+    if(event==='USER_UPDATED'){
+      // Senha foi trocada — faz signOut para forçar login limpo
+      await sb.auth.signOut();
+    }
+
+    if(event==='SIGNED_OUT'){
+      currentUser=null;
+      gastos=[];patroes=[];diasTrabalhados=[];activeWorker=null;
+      document.getElementById('main-app').classList.remove('visible');
+      document.getElementById('auth-screen').classList.add('visible');
+    }
+
+    if(event==='TOKEN_REFRESHED' && session){
+      // Atualiza referência do usuário silenciosamente
+      currentUser=session.user;
     }
   });
 })();

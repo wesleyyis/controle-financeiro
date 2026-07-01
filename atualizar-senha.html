@@ -142,26 +142,58 @@ async function doReset(){
     btn.disabled=false;btn.textContent='Salvar nova senha';
     showErr('Erro ao atualizar: '+error.message);return;
   }
-  // Sucesso
+  // ── FIX: após trocar senha, faz signOut completo para limpar todos os tokens ──
+  // Isso evita o bug de redirecionamento com sessão inválida
+  try { await sb.auth.signOut(); } catch(_){}
+  // Limpa chaves do Supabase no localStorage
+  Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
+
+  // Mostra tela de sucesso
   document.getElementById('reset-form').style.display='none';
   document.getElementById('success-box').style.display='block';
-  showToast('Senha atualizada com sucesso!');
+  showToast('Senha atualizada! Faça login com a nova senha.');
   setTimeout(()=>goLogin(),3000);
 }
 
 // ── INIT: verifica se chegou com sessão válida do link do email ──
 (async()=>{
-  // O Supabase injeta o token na URL como hash (#access_token=...)
-  // O cliente JS processa isso automaticamente ao inicializar
-  const {data:{session},error}=await sb.auth.getSession();
   document.getElementById('page-loader').style.display='none';
 
-  if(!session){
-    // Sem sessão = link expirado ou inválido
+  // O Supabase v2 processa o hash da URL automaticamente
+  // Verificamos se há um token de recuperação no hash antes de checar sessão
+  const hash = window.location.hash;
+  const isRecoveryLink = hash.includes('access_token') || hash.includes('type=recovery');
+
+  let session = null;
+  try {
+    const {data, error} = await sb.auth.getSession();
+    if(!error) session = data.session;
+  } catch(_){}
+
+  if(!session && !isRecoveryLink){
+    // Sem sessão e sem token na URL = link expirado ou inválido
     document.getElementById('reset-form').style.display='none';
     document.getElementById('invalid-box').style.display='block';
+    return;
   }
-  // Se tem sessão, o formulário já está visível por padrão
+
+  // Escuta mudança de estado — o Supabase pode processar o hash assincronamente
+  sb.auth.onAuthStateChange((event, s)=>{
+    if(event==='PASSWORD_RECOVERY' || (event==='SIGNED_IN' && s)){
+      // Sessão válida de recuperação — mostra o formulário
+      document.getElementById('reset-form').style.display='block';
+      document.getElementById('invalid-box').style.display='none';
+    }
+    if(event==='SIGNED_OUT'){
+      // Após o signOut que fazemos pós-atualização, redireciona para login
+      goLogin();
+    }
+  });
+
+  // Se já tinha sessão, mostra o formulário imediatamente
+  if(session){
+    document.getElementById('reset-form').style.display='block';
+  }
 })();
 </script>
 </body>
