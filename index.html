@@ -220,6 +220,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .form-row{flex-direction:column}
 }
 
+/* ── CALENDÁRIO ── */
+.cal-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-title{font-size:15px;font-weight:800;color:var(--text)}
+.cal-nav{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:16px;-webkit-tap-highlight-color:transparent}
+.cal-nav:active{background:var(--bg4)}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.cal-wd{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:4px 0;letter-spacing:0.03em}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day{aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:14px;font-weight:600;color:var(--text2);background:var(--bg3);border:2px solid transparent;position:relative;-webkit-tap-highlight-color:transparent;transition:all 0.15s;min-height:40px}
+.cal-day:active{transform:scale(0.92)}
+.cal-day.other-month{opacity:0.2;pointer-events:none}
+.cal-day.today{color:var(--accent2);border-color:rgba(99,102,241,0.35)}
+.cal-day.selected{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:800}
+.cal-day.has-work{color:var(--text)}
+.cal-day.has-work::after{content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--green)}
+.cal-day.selected.has-work::after{background:#fff}
+.cal-batch{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-top:12px}
+.cal-batch-info{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.cal-batch-count{font-size:13px;font-weight:700;color:var(--accent2)}
+.cal-batch-total{font-size:13px;font-weight:700;color:var(--green)}
+.cal-batch-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cal-batch-row input{flex:1;min-width:120px}
+.btn-cal-save{flex:1;height:46px;background:var(--green);border:none;border-radius:var(--radius-sm);color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;min-width:120px}
+.btn-cal-save:disabled{opacity:0.4;cursor:not-allowed}
+.btn-cal-clear{height:46px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text3);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;padding:0 14px;white-space:nowrap}
+.mode-toggle{display:flex;gap:6px;margin-bottom:14px}
+.mode-btn{flex:1;padding:9px;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);transition:all 0.15s}
+.mode-btn.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent2)}
+
 /* ── BOTÃO INSTALAR PWA ── */
 #pwa-install-bar{
   display:none;
@@ -889,6 +919,135 @@ async function delWorker(i){
   showToast(`Patrão "${patrao.nome}" excluído.`);
 }
 
+// ── CALENDÁRIO — estado ──
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let calSelected = new Set(); // Set de 'YYYY-MM-DD'
+let calMode = 'calendar'; // 'calendar' | 'single'
+
+function calDateKey(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0') }
+function todayKey(){ const n=new Date(); return calDateKey(n.getFullYear(),n.getMonth(),n.getDate()) }
+
+function renderCalendar(){
+  const patrao = patroes[activeWorker];
+  const jaRegistrados = new Set(
+    diasTrabalhados.filter(d=>d.patrao===patrao.nome).map(d=>d.data)
+  );
+  const hoje = todayKey();
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const primeiroDia = new Date(calYear, calMonth, 1).getDay();
+  const ultimoDia = new Date(calYear, calMonth+1, 0).getDate();
+  const ultimoMesAnt = new Date(calYear, calMonth, 0).getDate();
+
+  // Atualiza título
+  const titleEl = document.getElementById('cal-title');
+  if(titleEl) titleEl.textContent = MESES[calMonth]+' '+calYear;
+
+  // Gera células
+  let cells = '';
+  // Dias do mês anterior
+  for(let i=primeiroDia-1; i>=0; i--){
+    cells += `<div class="cal-day other-month">${ultimoMesAnt-i}</div>`;
+  }
+  // Dias do mês atual
+  for(let d=1; d<=ultimoDia; d++){
+    const key = calDateKey(calYear, calMonth, d);
+    const isToday = key === hoje;
+    const isSelected = calSelected.has(key);
+    const hasWork = jaRegistrados.has(key);
+    let cls = 'cal-day';
+    if(isToday) cls += ' today';
+    if(isSelected) cls += ' selected';
+    if(hasWork) cls += ' has-work';
+    cells += `<div class="${cls}" onclick="calToggleDay('${key}')">${d}</div>`;
+  }
+  // Completa última linha
+  const total = primeiroDia + ultimoDia;
+  const resto = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for(let i=1; i<=resto; i++){
+    cells += `<div class="cal-day other-month">${i}</div>`;
+  }
+
+  const gridEl = document.getElementById('cal-grid');
+  if(gridEl) gridEl.innerHTML = cells;
+
+  // Atualiza painel de lote
+  updateBatchPanel();
+}
+
+function calToggleDay(key){
+  if(calSelected.has(key)){
+    calSelected.delete(key);
+  } else {
+    calSelected.add(key);
+  }
+  renderCalendar();
+}
+
+function calChangeMonth(d){
+  calMonth += d;
+  if(calMonth < 0){ calMonth=11; calYear--; }
+  if(calMonth > 11){ calMonth=0; calYear++; }
+  renderCalendar();
+}
+
+function updateBatchPanel(){
+  const countEl = document.getElementById('cal-count');
+  const totalEl = document.getElementById('cal-total');
+  const saveBtn = document.getElementById('btn-cal-save');
+  const valEl = document.getElementById('cal-val');
+  if(!countEl) return;
+  const n = calSelected.size;
+  const val = parseFloat(valEl?.value)||0;
+  countEl.textContent = n+' dia'+(n!==1?'s':'')+' selecionado'+(n!==1?'s':'');
+  totalEl.textContent = val>0 ? '= '+fmtBRL(n*val) : '';
+  if(saveBtn) saveBtn.disabled = n===0;
+}
+
+function calClearSelection(){
+  calSelected.clear();
+  renderCalendar();
+}
+
+async function salvarDiasEmLote(){
+  const valor = parseFloat(document.getElementById('cal-val').value);
+  if(isNaN(valor)||valor<=0){ showToast('Digite o valor da diária.',true); return; }
+  if(calSelected.size===0){ showToast('Selecione pelo menos um dia.',true); return; }
+
+  const patrao = patroes[activeWorker].nome;
+  const uid = currentUser.id;
+
+  // Filtra dias que já existem para não duplicar
+  const jaRegistrados = new Set(
+    diasTrabalhados.filter(d=>d.patrao===patrao).map(d=>d.data)
+  );
+  const novos = [...calSelected].filter(d=>!jaRegistrados.has(d));
+  const duplicados = calSelected.size - novos.length;
+
+  if(novos.length===0){
+    showToast('Todos os dias selecionados já estão registrados.',true);
+    return;
+  }
+
+  const btn = document.getElementById('btn-cal-save');
+  btn.disabled=true; btn.textContent='Salvando...';
+
+  const rows = novos.map(data=>({ patrao, data, valor, user_id: uid }));
+  const {data:inserted, error} = await sb.from('dias_trabalhados').insert(rows).select();
+
+  btn.disabled=false; btn.textContent=`💾 Salvar ${calSelected.size} dias`;
+
+  if(error){ showToast('Erro ao salvar dias.',true); console.error(error); return; }
+
+  diasTrabalhados.push(...(inserted||[]));
+  calSelected.clear();
+
+  let msg = `${novos.length} dia${novos.length!==1?'s':''} registrado${novos.length!==1?'s':''}!`;
+  if(duplicados>0) msg += ` (${duplicados} já existiam, ignorados)`;
+  showToast(msg);
+  renderWorkerPanel();
+}
+
 function renderWorkerPanel(){
   const panel=document.getElementById('worker-panel');
   if(activeWorker===null||activeWorker>=patroes.length){
@@ -897,21 +1056,64 @@ function renderWorkerPanel(){
   const patrao=patroes[activeWorker];
   const days=diasTrabalhados.filter(d=>d.patrao===patrao.nome).sort((a,b)=>b.data.localeCompare(a.data));
   const total=days.reduce((s,d)=>s+Number(d.valor),0);
+
   panel.innerHTML=`
     <div class="summary-grid" style="margin-bottom:16px">
       <div class="scard"><div class="scard-label">TOTAL DE DIAS</div><div class="scard-val blue">${days.length}</div></div>
       <div class="scard"><div class="scard-label">TOTAL RECEBIDO</div><div class="scard-val green">${fmtBRL(total)}</div></div>
     </div>
-    <div class="add-card">
-      <div class="card-title">REGISTRAR DIA TRABALHADO</div>
-      <div class="form-stack">
-        <input type="date" id="work-date" class="inp">
-        <input type="number" id="work-val" class="inp" placeholder="Valor do dia R$" min="0" step="0.01" inputmode="decimal">
-        <button class="btn-primary" id="btn-add-work" onclick="addWorkDay()">+ Registrar</button>
+
+    <div class="mode-toggle">
+      <button class="mode-btn${calMode==='single'?' active':''}" onclick="setCalMode('single')">📅 Dia único</button>
+      <button class="mode-btn${calMode==='calendar'?' active':''}" onclick="setCalMode('calendar')">🗓️ Vários dias</button>
+    </div>
+
+    <!-- MODO DIA ÚNICO -->
+    <div id="mode-single" style="display:${calMode==='single'?'block':'none'}">
+      <div class="add-card">
+        <div class="card-title">REGISTRAR DIA TRABALHADO</div>
+        <div class="form-stack">
+          <input type="date" id="work-date" class="inp">
+          <input type="number" id="work-val" class="inp" placeholder="Valor do dia R$" min="0" step="0.01" inputmode="decimal">
+          <button class="btn-primary" id="btn-add-work" onclick="addWorkDay()">+ Registrar</button>
+        </div>
       </div>
     </div>
-    <div class="list-header">TODOS OS DIAS — ${patrao.nome.toUpperCase()}</div>
-    <div style="margin-top:10px">
+
+    <!-- MODO CALENDÁRIO -->
+    <div id="mode-calendar" style="display:${calMode==='calendar'?'block':'none'}">
+      <div class="cal-wrap">
+        <div class="cal-header">
+          <button class="cal-nav" onclick="calChangeMonth(-1)">‹</button>
+          <div class="cal-title" id="cal-title">—</div>
+          <button class="cal-nav" onclick="calChangeMonth(1)">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <div class="cal-wd">Dom</div><div class="cal-wd">Seg</div><div class="cal-wd">Ter</div>
+          <div class="cal-wd">Qua</div><div class="cal-wd">Qui</div><div class="cal-wd">Sex</div>
+          <div class="cal-wd">Sáb</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-batch">
+          <div class="cal-batch-info">
+            <span class="cal-batch-count" id="cal-count">0 dias selecionados</span>
+            <span class="cal-batch-total" id="cal-total"></span>
+          </div>
+          <div class="cal-batch-row">
+            <input type="number" id="cal-val" class="inp" placeholder="Valor da diária R$"
+              min="0" step="0.01" inputmode="decimal"
+              oninput="updateBatchPanel()">
+            <button class="btn-cal-clear" onclick="calClearSelection()">Limpar</button>
+          </div>
+          <button class="btn-cal-save" id="btn-cal-save" onclick="salvarDiasEmLote()"
+            style="width:100%;margin-top:10px" disabled>
+            💾 Salvar dias selecionados
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="list-header" style="margin-bottom:10px">TODOS OS DIAS — ${patrao.nome.toUpperCase()}</div>
     ${days.length
       ?`<div class="days-list">${days.map(d=>`
           <div class="day-item">
@@ -925,9 +1127,18 @@ function renderWorkerPanel(){
             </button>
           </div>`).join('')}</div>`
       :'<div class="empty-msg" style="padding:2rem">Nenhum dia registrado ainda.</div>'}
-    </div>`;
+  `;
+
+  // Inicializa calendário se necessário
   const di=document.getElementById('work-date');
   if(di) di.value=new Date().toISOString().split('T')[0];
+  if(calMode==='calendar') renderCalendar();
+}
+
+function setCalMode(mode){
+  calMode = mode;
+  calSelected.clear();
+  renderWorkerPanel();
 }
 
 async function addWorkDay(){
@@ -935,6 +1146,11 @@ async function addWorkDay(){
   const valor=parseFloat(document.getElementById('work-val').value);
   if(!dataVal||isNaN(valor)||valor<=0){showToast('Preencha a data e o valor.',true);return}
   const patrao=patroes[activeWorker].nome;
+
+  // Verifica duplicidade
+  const jaTem = diasTrabalhados.some(d=>d.patrao===patrao && d.data===dataVal);
+  if(jaTem){ showToast('Este dia já está registrado para este patrão.',true); return; }
+
   const btn=document.getElementById('btn-add-work');
   btn.disabled=true;btn.textContent='Salvando...';
   const {data:row,error}=await sb.from('dias_trabalhados').insert([{patrao,data:dataVal,valor,user_id:currentUser.id}]).select().single();
