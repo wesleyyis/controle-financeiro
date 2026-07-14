@@ -364,29 +364,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
     <!-- Métricas -->
     <div class="metric-grid">
+      <!-- Card 1: Total Recebido -->
+      <div class="mcard">
+        <div class="mcard-icon" style="background:var(--green-bg);color:var(--green)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="mcard-label">TOTAL RECEBIDO</div>
+        <div class="mcard-val green" id="metric-recebido">R$ 0,00</div>
+        <div class="mcard-sub" id="metric-dias-trabalho">0 dias de trabalho</div>
+      </div>
+      <!-- Card 2: Total Gasto -->
       <div class="mcard">
         <div class="mcard-icon" style="background:var(--red-bg);color:var(--red)">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
         <div class="mcard-label">TOTAL GASTO</div>
         <div class="mcard-val red" id="metric-total">R$ 0,00</div>
-        <div class="mcard-sub" id="metric-count">0 lançamentos</div>
+        <div class="mcard-sub" id="metric-vs-anterior">— vs ciclo anterior</div>
       </div>
+      <!-- Card 3: Saldo -->
       <div class="mcard">
-        <div class="mcard-icon" style="background:var(--blue-bg);color:var(--blue)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <div class="mcard-icon" id="metric-saldo-icon" style="background:var(--green-bg);color:var(--green)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         </div>
-        <div class="mcard-label">MÉDIA DIÁRIA</div>
-        <div class="mcard-val blue" id="metric-media">R$ 0,00</div>
-        <div class="mcard-sub">por dia no ciclo</div>
-      </div>
-      <div class="mcard">
-        <div class="mcard-icon" style="background:var(--amber-bg);color:var(--amber)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-        </div>
-        <div class="mcard-label">TOP CATEGORIA</div>
-        <div class="mcard-val amber" id="metric-top" style="font-size:12px">—</div>
-        <div class="mcard-sub" id="metric-top-val"></div>
+        <div class="mcard-label">SALDO DO CICLO</div>
+        <div class="mcard-val green" id="metric-saldo">R$ 0,00</div>
+        <div class="mcard-sub" id="metric-saldo-status">Você está no azul 😊</div>
       </div>
     </div>
 
@@ -648,23 +651,70 @@ function gastosDoCiclo(y,m){
 }
 
 // ── MÉTRICAS + GRÁFICOS ──
+
+// Retorna dias trabalhados de todos os patrões dentro do ciclo atual
+function diasTrabalhadosDoCiclo(y, m){
+  const s = cycleStart(y, m);
+  const e = cycleEnd(y, m);
+  return diasTrabalhados.filter(d => {
+    const dt = new Date(d.data + 'T12:00:00');
+    return dt >= s && dt <= e;
+  });
+}
+
 function renderMetrics(items){
-  const total=items.reduce((s,g)=>s+Number(g.valor),0);
-  const dias=cycleDays(cycleRef.year,cycleRef.month);
-  const media=dias>0?total/dias:0;
-  document.getElementById('metric-total').textContent=fmtBRL(total);
-  document.getElementById('metric-count').textContent=items.length+' lançamento'+(items.length!==1?'s':'');
-  document.getElementById('metric-media').textContent=fmtBRL(media);
-  // top categoria
-  const catMap={};
-  items.forEach(g=>{catMap[g.categoria]=(catMap[g.categoria]||0)+Number(g.valor)});
-  const cats=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
-  if(cats.length){
-    document.getElementById('metric-top').textContent=cats[0][0];
-    document.getElementById('metric-top-val').textContent=fmtBRL(cats[0][1]);
+  // ── CARD 1: TOTAL RECEBIDO ──
+  const diasCiclo = diasTrabalhadosDoCiclo(cycleRef.year, cycleRef.month);
+  const totalRecebido = diasCiclo.reduce((s, d) => s + Number(d.valor), 0);
+  const qtdDias = diasCiclo.length;
+  document.getElementById('metric-recebido').textContent = fmtBRL(totalRecebido);
+  document.getElementById('metric-dias-trabalho').textContent =
+    qtdDias + ' dia' + (qtdDias !== 1 ? 's' : '') + ' de trabalho';
+
+  // ── CARD 2: TOTAL GASTO + COMPARATIVO ──
+  const totalGasto = items.reduce((s, g) => s + Number(g.valor), 0);
+  document.getElementById('metric-total').textContent = fmtBRL(totalGasto);
+
+  // Calcula gasto do ciclo anterior para comparação
+  let mesAnt = cycleRef.month - 1, anoAnt = cycleRef.year;
+  if(mesAnt < 0){ mesAnt = 11; anoAnt--; }
+  const itensAnt = gastosDoCiclo(anoAnt, mesAnt);
+  const totalAnt = itensAnt.reduce((s, g) => s + Number(g.valor), 0);
+
+  let vsLabel = '— sem ciclo anterior';
+  if(totalAnt > 0){
+    const diff = ((totalGasto - totalAnt) / totalAnt) * 100;
+    const abs = Math.abs(diff).toFixed(0);
+    if(diff < -1) vsLabel = '📉 ' + abs + '% menor que o ciclo anterior';
+    else if(diff > 1) vsLabel = '📈 ' + abs + '% maior que o ciclo anterior';
+    else vsLabel = '➡️ Similar ao ciclo anterior';
+  } else if(totalGasto > 0){
+    vsLabel = 'Primeiro registro neste ciclo';
+  }
+  document.getElementById('metric-vs-anterior').textContent = vsLabel;
+
+  // ── CARD 3: SALDO ──
+  const saldo = totalRecebido - totalGasto;
+  const saldoEl = document.getElementById('metric-saldo');
+  const saldoIconEl = document.getElementById('metric-saldo-icon');
+  const saldoStatusEl = document.getElementById('metric-saldo-status');
+
+  saldoEl.textContent = fmtBRL(Math.abs(saldo));
+
+  if(saldo >= 0){
+    saldoEl.className = 'mcard-val green';
+    saldoEl.textContent = fmtBRL(saldo);
+    saldoIconEl.style.background = 'var(--green-bg)';
+    saldoIconEl.style.color = 'var(--green)';
+    saldoIconEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>';
+    saldoStatusEl.textContent = saldo === 0 ? 'No limite do orçamento' : 'Você está no azul 😊';
   } else {
-    document.getElementById('metric-top').textContent='—';
-    document.getElementById('metric-top-val').textContent='';
+    saldoEl.className = 'mcard-val red';
+    saldoEl.textContent = '- ' + fmtBRL(Math.abs(saldo));
+    saldoIconEl.style.background = 'var(--red-bg)';
+    saldoIconEl.style.color = 'var(--red)';
+    saldoIconEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>';
+    saldoStatusEl.textContent = 'Atenção ao orçamento ⚠️';
   }
 }
 
@@ -1056,6 +1106,8 @@ async function salvarDiasEmLote(){
   if(duplicados>0) msg += ` (${duplicados} já existiam, ignorados)`;
   showToast(msg);
   renderWorkerPanel();
+  // Atualiza cards do dashboard com novo Total Recebido
+  renderExpenses();
 }
 
 function renderWorkerPanel(){
@@ -1168,13 +1220,19 @@ async function addWorkDay(){
   if(error){showToast('Erro ao salvar dia.',true);return}
   diasTrabalhados.push(row);
   document.getElementById('work-val').value='';
-  renderWorkerPanel();showToast('Dia registrado!');
+  renderWorkerPanel();
+  // Atualiza cards do dashboard com novo Total Recebido
+  renderExpenses();
+  showToast('Dia registrado!');
 }
 async function delWorkDay(id){
   if(!confirm('Remover este dia?')) return;
   const {error}=await sb.from('dias_trabalhados').delete().eq('id',id);
   if(error){showToast('Erro ao remover.',true);return}
-  diasTrabalhados=diasTrabalhados.filter(d=>d.id!==id);renderWorkerPanel();
+  diasTrabalhados=diasTrabalhados.filter(d=>d.id!==id);
+  renderWorkerPanel();
+  // Atualiza cards do dashboard com novo Total Recebido
+  renderExpenses();
 }
 
 // ── CARREGAR DADOS ──
