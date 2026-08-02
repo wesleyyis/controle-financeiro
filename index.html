@@ -562,7 +562,16 @@ function loadOfflineCache(){
 
 const SUPA_URL='https://vtdfgfbscloefzvvfuwi.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0ZGZnZmJzY2xvZWZ6dnZmdXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MDIyOTYsImV4cCI6MjA5Mzk3ODI5Nn0.-2BgoHEJ4ih93ePRQiVkf_Q0uAVKp6M8NuMGYHIKF38';
-const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+// ── CLIENTE SUPABASE com persistência de sessão garantida ──
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,          // mantém sessão no localStorage
+    autoRefreshToken: true,        // renova token automaticamente
+    detectSessionInUrl: true,      // detecta token no hash (recuperação de senha)
+    storageKey: 'fin-auth-token',  // chave fixa no localStorage — evita conflito
+  }
+});
 
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MONTHS_SHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -621,22 +630,49 @@ function showLogin(){
 function showAuthErr(msg){const el=document.getElementById('auth-err');el.textContent=msg;el.classList.add('visible')}
 
 async function doLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const pass=document.getElementById('login-pass').value;
-  if(!email||!pass){showAuthErr('Preencha email e senha.');return}
-  const btn=document.getElementById('btn-login');
-  btn.disabled=true;btn.textContent='Entrando...';
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if(!email||!pass){ showAuthErr('Preencha email e senha.'); return; }
 
-  // ── FIX BUG 1: limpa qualquer sessão/token antigo antes de logar ──
-  try{ await sb.auth.signOut(); }catch(_){}
+  const btn = document.getElementById('btn-login');
+  btn.disabled=true; btn.textContent='Entrando...';
 
-  const {error}=await sb.auth.signInWithPassword({email,password:pass});
-  btn.disabled=false;btn.textContent='Entrar';
+  // Limpa APENAS o token local sem chamar o servidor
+  // (evita erro de CORS no localhost e conflito de sessão)
+  try { localStorage.removeItem('fin-auth-token'); } catch(_){}
+
+  const {data, error} = await sb.auth.signInWithPassword({email, password:pass});
+
+  btn.disabled=false; btn.textContent='Entrar';
+
   if(error){
-    // Se ainda falhar, limpa localStorage de auth e tenta avisar o usuário
-    Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
-    showAuthErr('Email ou senha incorretos. Se o problema persistir, use "Esqueceu a senha?" para redefinir.');
+    // Log detalhado no console para facilitar debug local
+    console.group('🔴 [Login] Erro de autenticação');
+    console.log('Mensagem:', error.message);
+    console.log('Status:', error.status);
+    console.log('Código:', error.code || 'N/A');
+    console.log('Email usado:', email);
+    console.groupEnd();
+
+    // Mensagens de erro específicas baseadas no retorno do Supabase
+    let msg = 'Erro ao entrar. Tente novamente.';
+    if(error.message?.includes('Invalid login credentials')){
+      msg = 'Email ou senha incorretos.';
+    } else if(error.message?.includes('Email not confirmed')){
+      msg = 'Email não confirmado. Verifique sua caixa de entrada.';
+    } else if(error.message?.includes('Too many requests')){
+      msg = 'Muitas tentativas. Aguarde alguns minutos.';
+    } else if(error.message?.includes('Network')||error.status===0){
+      msg = 'Sem conexão com a internet. Verifique sua rede.';
+    } else {
+      msg = 'Erro: ' + error.message;
+    }
+    showAuthErr(msg);
+    return;
   }
+
+  // Login OK — log de sucesso
+  console.log('✅ [Login] Bem-vindo,', data.user?.email);
 }
 async function doSignup(){
   const email=document.getElementById('signup-email').value.trim();
@@ -1319,28 +1355,22 @@ async function loadAllData(){
 (async()=>{
   let session = null;
   try {
-    // getSession pode travar sem internet — aplica timeout de 5s
     const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')),5000));
     const {data, error} = await Promise.race([sb.auth.getSession(), timeout]);
     if(error) throw error;
     session = data?.session || null;
+    if(session) console.log('✅ [Init] Sessão ativa:', session.user?.email);
   } catch(e) {
     console.warn('[Init] getSession falhou:', e.message);
-    // Sem internet — tenta usar sessão do localStorage diretamente
+    // Tenta recuperar sessão do localStorage pela chave fixa
     try {
-      const sbKey = Object.keys(localStorage).find(k=>k.startsWith('sb-') && k.includes('auth-token'));
-      if(sbKey){
-        const raw = JSON.parse(localStorage.getItem(sbKey));
-        // Supabase v2 armazena em access_token
-        if(raw?.access_token || raw?.currentSession?.access_token){
-          // Sessão existe localmente — permite modo offline
-          session = raw.currentSession || raw;
-        }
-      }
+      const raw = JSON.parse(localStorage.getItem('fin-auth-token') || 'null');
+      if(raw?.currentSession?.user) session = raw.currentSession;
+      else if(raw?.user) session = raw;
     } catch(_){}
-    // Limpa apenas se não conseguiu sessão local
+    // Se não achou sessão válida, limpa só a chave do app
     if(!session){
-      Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
+      localStorage.removeItem('fin-auth-token');
     }
   }
 
@@ -1397,6 +1427,7 @@ async function loadAllData(){
       currentUser=null;
       gastos=[];patroes=[];diasTrabalhados=[];activeWorker=null;
       setOfflineMode(false);
+      localStorage.removeItem('fin-auth-token');
       document.getElementById('main-app').classList.remove('visible');
       document.getElementById('auth-screen').classList.add('visible');
     }
