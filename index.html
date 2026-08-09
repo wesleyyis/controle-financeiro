@@ -132,7 +132,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .form-stack{display:flex;flex-direction:column;gap:10px}
 .form-row{display:flex;gap:10px}
 .form-row input{flex:1;min-width:0}
-.inp{width:100%;height:48px;padding:0 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:15px;outline:none;transition:border-color 0.18s;-webkit-appearance:none}
+.inp{width:100%;height:48px;padding:0 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:15px;outline:none;transition:border-color 0.18s;-webkit-appearance:none;appearance:none}
 .inp::placeholder{color:var(--text3)}
 .inp:focus{border-color:var(--accent)}
 .inp.error{border-color:var(--red)}
@@ -152,7 +152,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .search-wrap svg{flex-shrink:0;color:var(--text3)}
 .search-wrap input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:14px}
 .search-wrap input::placeholder{color:var(--text3)}
-.filter-select{height:42px;padding:0 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b90a7' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.filter-select{height:42px;padding:0 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b90a7' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
 
 /* LIST */
 .list-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -219,6 +219,25 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .chart-card.full{grid-column:1}
   .form-row{flex-direction:column}
 }
+
+/* ── DAR BAIXA / PAGAMENTOS ── */
+.pendente-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.pendente-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.pendente-title{font-size:13px;font-weight:700;color:var(--text3);letter-spacing:0.05em}
+.pendente-total{font-size:18px;font-weight:900;color:var(--amber)}
+.btn-baixa{width:100%;padding:14px;border:none;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--green),#16a34a);color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;-webkit-tap-highlight-color:transparent}
+.btn-baixa:active{transform:scale(0.98);opacity:0.9}
+.btn-baixa:disabled{opacity:0.4;cursor:not-allowed}
+.hist-item{background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hist-left{flex:1}
+.hist-patrao{font-size:14px;font-weight:700;color:var(--text)}
+.hist-data{font-size:12px;color:var(--text3);margin-top:2px}
+.hist-dias{font-size:12px;color:var(--text3)}
+.hist-val{font-size:15px;font-weight:800;color:var(--green);white-space:nowrap}
+.hist-del{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:6px;-webkit-tap-highlight-color:transparent}
+.hist-del:active{color:var(--red)}
+.hist-section{margin-top:16px}
+.hist-section-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:10px}
 
 /* ── CALENDÁRIO ── */
 .cal-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
@@ -562,7 +581,16 @@ function loadOfflineCache(){
 
 const SUPA_URL='https://vtdfgfbscloefzvvfuwi.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0ZGZnZmJzY2xvZWZ6dnZmdXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MDIyOTYsImV4cCI6MjA5Mzk3ODI5Nn0.-2BgoHEJ4ih93ePRQiVkf_Q0uAVKp6M8NuMGYHIKF38';
-const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+// ── CLIENTE SUPABASE com persistência de sessão garantida ──
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,          // mantém sessão no localStorage
+    autoRefreshToken: true,        // renova token automaticamente
+    detectSessionInUrl: true,      // detecta token no hash (recuperação de senha)
+    storageKey: 'fin-auth-token',  // chave fixa no localStorage — evita conflito
+  }
+});
 
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MONTHS_SHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -570,7 +598,7 @@ const WDAYS=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-fei
 const CAT_ICONS={'Alimentação':'🛒','Transporte':'🚌','Moradia':'🏠','Saúde':'💊','Educação':'📚','Lazer':'🎉','Compras':'🛍️','Contas':'💡','Outros':'📌','Conta/Serviço':'💡','Outro':'📌'};
 const CAT_COLORS=['#6366f1','#22c55e','#f87171','#60a5fa','#fbbf24','#a78bfa','#34d399','#fb923c','#e879f9'];
 
-let gastos=[],patroes=[],diasTrabalhados=[];
+let gastos=[],patroes=[],diasTrabalhados=[],pagamentos=[];
 let cfg={cycleDay:1};
 let activeWorker=null;
 let currentUser=null;
@@ -621,22 +649,49 @@ function showLogin(){
 function showAuthErr(msg){const el=document.getElementById('auth-err');el.textContent=msg;el.classList.add('visible')}
 
 async function doLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const pass=document.getElementById('login-pass').value;
-  if(!email||!pass){showAuthErr('Preencha email e senha.');return}
-  const btn=document.getElementById('btn-login');
-  btn.disabled=true;btn.textContent='Entrando...';
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if(!email||!pass){ showAuthErr('Preencha email e senha.'); return; }
 
-  // ── FIX BUG 1: limpa qualquer sessão/token antigo antes de logar ──
-  try{ await sb.auth.signOut(); }catch(_){}
+  const btn = document.getElementById('btn-login');
+  btn.disabled=true; btn.textContent='Entrando...';
 
-  const {error}=await sb.auth.signInWithPassword({email,password:pass});
-  btn.disabled=false;btn.textContent='Entrar';
+  // Limpa APENAS o token local sem chamar o servidor
+  // (evita erro de CORS no localhost e conflito de sessão)
+  try { localStorage.removeItem('fin-auth-token'); } catch(_){}
+
+  const {data, error} = await sb.auth.signInWithPassword({email, password:pass});
+
+  btn.disabled=false; btn.textContent='Entrar';
+
   if(error){
-    // Se ainda falhar, limpa localStorage de auth e tenta avisar o usuário
-    Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
-    showAuthErr('Email ou senha incorretos. Se o problema persistir, use "Esqueceu a senha?" para redefinir.');
+    // Log detalhado no console para facilitar debug local
+    console.group('🔴 [Login] Erro de autenticação');
+    console.log('Mensagem:', error.message);
+    console.log('Status:', error.status);
+    console.log('Código:', error.code || 'N/A');
+    console.log('Email usado:', email);
+    console.groupEnd();
+
+    // Mensagens de erro específicas baseadas no retorno do Supabase
+    let msg = 'Erro ao entrar. Tente novamente.';
+    if(error.message?.includes('Invalid login credentials')){
+      msg = 'Email ou senha incorretos.';
+    } else if(error.message?.includes('Email not confirmed')){
+      msg = 'Email não confirmado. Verifique sua caixa de entrada.';
+    } else if(error.message?.includes('Too many requests')){
+      msg = 'Muitas tentativas. Aguarde alguns minutos.';
+    } else if(error.message?.includes('Network')||error.status===0){
+      msg = 'Sem conexão com a internet. Verifique sua rede.';
+    } else {
+      msg = 'Erro: ' + error.message;
+    }
+    showAuthErr(msg);
+    return;
   }
+
+  // Login OK — log de sucesso
+  console.log('✅ [Login] Bem-vindo,', data.user?.email);
 }
 async function doSignup(){
   const email=document.getElementById('signup-email').value.trim();
@@ -663,7 +718,7 @@ async function doForgot(){
 }
 async function doLogout(){
   await sb.auth.signOut();
-  gastos=[];patroes=[];diasTrabalhados=[];activeWorker=null;
+  gastos=[];patroes=[];diasTrabalhados=[];pagamentos=[];activeWorker=null;
   document.getElementById('main-app').classList.remove('visible');
   document.getElementById('auth-screen').classList.add('visible');
 }
@@ -701,9 +756,26 @@ function diasTrabalhadosDoCiclo(y, m){
 
 function renderMetrics(items){
   // ── CARD 1: TOTAL RECEBIDO ──
+  // Soma pagamentos dados baixa no ciclo + dias pendentes ainda não pagos
+  const s = cycleStart(cycleRef.year, cycleRef.month);
+  const e = cycleEnd(cycleRef.year, cycleRef.month);
+
+  // Pagamentos confirmados (baixa dada) — filtra pelo INÍCIO do ciclo
+  // que está gravado no registro, não pela data do pagamento
+  const sStr = s.toISOString().split('T')[0];
+  const eStr = e.toISOString().split('T')[0];
+  const pagsCiclo = pagamentos.filter(p => {
+    // ciclo_inicio gravado no momento da baixa deve estar dentro do ciclo consultado
+    return p.ciclo_inicio >= sStr && p.ciclo_inicio <= eStr;
+  });
+  const totalPago = pagsCiclo.reduce((acc, p) => acc + Number(p.valor), 0);
+
+  // Dias trabalhados pendentes (ainda não foram dados baixa) no ciclo
   const diasCiclo = diasTrabalhadosDoCiclo(cycleRef.year, cycleRef.month);
-  const totalRecebido = diasCiclo.reduce((s, d) => s + Number(d.valor), 0);
-  const qtdDias = diasCiclo.length;
+  const totalPendente = diasCiclo.reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalRecebido = totalPago + totalPendente;
+  const qtdDias = diasCiclo.length + pagsCiclo.reduce((acc,p)=>acc+Number(p.dias_count||0),0);
+
   document.getElementById('metric-recebido').textContent = fmtBRL(totalRecebido);
   document.getElementById('metric-dias-trabalho').textContent =
     qtdDias + ' dia' + (qtdDias !== 1 ? 's' : '') + ' de trabalho';
@@ -712,7 +784,6 @@ function renderMetrics(items){
   const totalGasto = items.reduce((s, g) => s + Number(g.valor), 0);
   document.getElementById('metric-total').textContent = fmtBRL(totalGasto);
 
-  // Calcula gasto do ciclo anterior para comparação
   let mesAnt = cycleRef.month - 1, anoAnt = cycleRef.year;
   if(mesAnt < 0){ mesAnt = 11; anoAnt--; }
   const itensAnt = gastosDoCiclo(anoAnt, mesAnt);
@@ -736,22 +807,20 @@ function renderMetrics(items){
   const saldoIconEl = document.getElementById('metric-saldo-icon');
   const saldoStatusEl = document.getElementById('metric-saldo-status');
 
-  saldoEl.textContent = fmtBRL(Math.abs(saldo));
-
   if(saldo >= 0){
     saldoEl.className = 'mcard-val green';
     saldoEl.textContent = fmtBRL(saldo);
     saldoIconEl.style.background = 'var(--green-bg)';
     saldoIconEl.style.color = 'var(--green)';
     saldoIconEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>';
-    saldoStatusEl.textContent = saldo === 0 ? 'No limite do orçamento' : 'Você está no azul 😊';
+    saldoStatusEl.textContent = saldo === 0 ? 'No limite do orçamento' : '🟢 Você está no azul!';
   } else {
     saldoEl.className = 'mcard-val red';
     saldoEl.textContent = '- ' + fmtBRL(Math.abs(saldo));
     saldoIconEl.style.background = 'var(--red-bg)';
     saldoIconEl.style.color = 'var(--red)';
     saldoIconEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>';
-    saldoStatusEl.textContent = 'Atenção ao orçamento ⚠️';
+    saldoStatusEl.textContent = '🔴 Gastos acima dos ganhos';
   }
 }
 
@@ -1147,20 +1216,117 @@ async function salvarDiasEmLote(){
   renderExpenses();
 }
 
+// ── DAR BAIXA / CONFIRMAR PAGAMENTO ──
+async function darBaixa(patraoNome){
+  const diasPendentes = diasTrabalhados.filter(d => d.patrao === patraoNome);
+  if(!diasPendentes.length){ showToast('Nenhum dia pendente para dar baixa.',true); return; }
+
+  const totalVal = diasPendentes.reduce((s,d)=>s+Number(d.valor),0);
+  const qtd = diasPendentes.length;
+
+  if(!confirm(`Confirmar recebimento de ${fmtBRL(totalVal)} referente a ${qtd} dia${qtd!==1?'s':''} trabalhados para ${patraoNome}?\n\nOs dias pendentes serão arquivados e o valor ficará salvo no histórico.`)) return;
+
+  const btn = document.getElementById('btn-baixa-'+patraoNome.replace(/\s/g,'_'));
+  if(btn){ btn.disabled=true; btn.textContent='Salvando...'; }
+
+  const uid = currentUser.id;
+  const hoje = new Date().toISOString().split('T')[0];
+  const s = cycleStart(cycleRef.year, cycleRef.month).toISOString().split('T')[0];
+  const e = cycleEnd(cycleRef.year, cycleRef.month).toISOString().split('T')[0];
+
+  // 1. Grava o pagamento no histórico
+  const {data:pag, error:errPag} = await sb.from('pagamentos').insert([{
+    user_id: uid,
+    patrao: patraoNome,
+    valor: totalVal,
+    dias_count: qtd,
+    data_pagamento: hoje,
+    ciclo_inicio: s,
+    ciclo_fim: e,
+  }]).select().single();
+
+  if(errPag){ showToast('Erro ao registrar pagamento.',true); console.error(errPag); return; }
+
+  // 2. Deleta os dias pendentes do patrão
+  const ids = diasPendentes.map(d=>d.id);
+  const {error:errDel} = await sb.from('dias_trabalhados').delete().in('id', ids);
+  if(errDel){ showToast('Pagamento salvo mas erro ao limpar dias.',true); console.error(errDel); }
+
+  // 3. Atualiza estado local
+  pagamentos.push(pag);
+  diasTrabalhados = diasTrabalhados.filter(d => d.patrao !== patraoNome);
+
+  // Salva no cache offline
+  saveOfflineCache(gastos, patroes, diasTrabalhados);
+
+  renderWorkerPanel();
+  renderExpenses();
+  showToast(`✅ Pagamento de ${fmtBRL(totalVal)} confirmado!`);
+}
+
+async function deletarPagamento(id){
+  if(!confirm('Remover este registro de pagamento?\n\nOs dias trabalhados NÃO serão restaurados.')) return;
+  const {error} = await sb.from('pagamentos').delete().eq('id', id);
+  if(error){ showToast('Erro ao remover.',true); return; }
+  pagamentos = pagamentos.filter(p=>p.id!==id);
+  renderWorkerPanel();
+  renderExpenses();
+  showToast('Pagamento removido.');
+}
+
 function renderWorkerPanel(){
   const panel=document.getElementById('worker-panel');
   if(activeWorker===null||activeWorker>=patroes.length){
     panel.innerHTML='<div class="empty-msg"><div class="empty-icon">👷</div>Selecione ou adicione<br>um patrão acima.</div>';return;
   }
   const patrao=patroes[activeWorker];
-  const days=diasTrabalhados.filter(d=>d.patrao===patrao.nome).sort((a,b)=>b.data.localeCompare(a.data));
-  const total=days.reduce((s,d)=>s+Number(d.valor),0);
+  const pNome=patrao.nome;
+  const btnId='btn-baixa-'+pNome.replace(/\s/g,'_');
+
+  // Dias pendentes (ainda não pagos)
+  const diasPendentes=diasTrabalhados.filter(d=>d.patrao===pNome).sort((a,b)=>b.data.localeCompare(a.data));
+  const totalPendente=diasPendentes.reduce((s,d)=>s+Number(d.valor),0);
+
+  // Histórico de pagamentos do patrão
+  const histPatrao=pagamentos.filter(p=>p.patrao===pNome).sort((a,b)=>b.data_pagamento.localeCompare(a.data_pagamento));
+  const totalHist=histPatrao.reduce((s,p)=>s+Number(p.valor),0);
 
   panel.innerHTML=`
     <div class="summary-grid" style="margin-bottom:16px">
-      <div class="scard"><div class="scard-label">TOTAL DE DIAS</div><div class="scard-val blue">${days.length}</div></div>
-      <div class="scard"><div class="scard-label">TOTAL RECEBIDO</div><div class="scard-val green">${fmtBRL(total)}</div></div>
+      <div class="scard"><div class="scard-label">DIAS PENDENTES</div><div class="scard-val amber" style="color:var(--amber)">${diasPendentes.length}</div></div>
+      <div class="scard"><div class="scard-label">TOTAL RECEBIDO</div><div class="scard-val green">${fmtBRL(totalHist)}</div></div>
     </div>
+
+    <!-- CARD PENDENTES + DAR BAIXA -->
+    ${diasPendentes.length ? `
+    <div class="pendente-card">
+      <div class="pendente-header">
+        <span class="pendente-title">⏳ AGUARDANDO PAGAMENTO</span>
+        <span class="pendente-total">${fmtBRL(totalPendente)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:14px">
+        ${diasPendentes.length} dia${diasPendentes.length!==1?'s':''} trabalhado${diasPendentes.length!==1?'s':''} — clique em "Dar Baixa" quando ${pNome} te pagar
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:160px;overflow-y:auto">
+        ${diasPendentes.map(d=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:8px;gap:8px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtDate(d.data)}</div>
+              <div style="font-size:11px;color:var(--text3)">${WDAYS[new Date(d.data+'T12:00:00').getDay()]}</div>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:var(--amber)">${fmtBRL(d.valor)}</div>
+            <button class="icon-btn del" onclick="delWorkDay('${d.id}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
+          </div>`).join('')}
+      </div>
+      <button class="btn-baixa" id="${btnId}" onclick="darBaixa('${pNome}')">
+        ✅ Dar Baixa — Recebi ${fmtBRL(totalPendente)}
+      </button>
+    </div>` : `
+    <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green);font-weight:600;text-align:center">
+      ✅ Nenhum dia pendente — tudo pago!
+    </div>`}
 
     <div class="mode-toggle">
       <button class="mode-btn${calMode==='single'?' active':''}" onclick="setCalMode('single')">📅 Dia único</button>
@@ -1200,8 +1366,7 @@ function renderWorkerPanel(){
           </div>
           <div class="cal-batch-row">
             <input type="number" id="cal-val" class="inp" placeholder="Valor da diária R$"
-              min="0" step="0.01" inputmode="decimal"
-              oninput="updateBatchPanel()">
+              min="0" step="0.01" inputmode="decimal" oninput="updateBatchPanel()">
             <button class="btn-cal-clear" onclick="calClearSelection()">Limpar</button>
           </div>
           <button class="btn-cal-save" id="btn-cal-save" onclick="salvarDiasEmLote()"
@@ -1212,23 +1377,27 @@ function renderWorkerPanel(){
       </div>
     </div>
 
-    <div class="list-header" style="margin-bottom:10px">TODOS OS DIAS — ${patrao.nome.toUpperCase()}</div>
-    ${days.length
-      ?`<div class="days-list">${days.map(d=>`
-          <div class="day-item">
-            <div class="day-item-left">
-              <div class="day-item-date">${fmtDate(d.data)}</div>
-              <div class="day-item-weekday">${WDAYS[new Date(d.data+'T12:00:00').getDay()]}</div>
-            </div>
-            <div class="day-item-val">${fmtBRL(d.valor)}</div>
-            <button class="icon-btn del" onclick="delWorkDay('${d.id}')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    <!-- HISTÓRICO DE PAGAMENTOS -->
+    ${histPatrao.length ? `
+    <div class="hist-section">
+      <div class="hist-section-title">📋 HISTÓRICO DE PAGAMENTOS — ${pNome.toUpperCase()}</div>
+      ${histPatrao.map(p=>`
+        <div class="hist-item">
+          <div class="hist-left">
+            <div class="hist-patrao">💰 ${fmtBRL(p.valor)}</div>
+            <div class="hist-data">Pago em ${fmtDate(p.data_pagamento)}</div>
+            <div class="hist-dias">${p.dias_count} dia${p.dias_count!==1?'s':''} trabalhado${p.dias_count!==1?'s':''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="hist-val">${fmtBRL(p.valor)}</span>
+            <button class="hist-del" onclick="deletarPagamento('${p.id}')" title="Remover">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
             </button>
-          </div>`).join('')}</div>`
-      :'<div class="empty-msg" style="padding:2rem">Nenhum dia registrado ainda.</div>'}
+          </div>
+        </div>`).join('')}
+    </div>` : ''}
   `;
 
-  // Inicializa calendário se necessário
   const di=document.getElementById('work-date');
   if(di) di.value=new Date().toISOString().split('T')[0];
   if(calMode==='calendar') renderCalendar();
@@ -1284,15 +1453,16 @@ async function loadAllData(){
     const fetchData = Promise.all([
       sb.from('gastos').select('*').eq('user_id',uid).order('data',{ascending:false}),
       sb.from('patroes').select('*').eq('user_id',uid).order('nome'),
-      sb.from('dias_trabalhados').select('*').eq('user_id',uid).order('data',{ascending:false})
+      sb.from('dias_trabalhados').select('*').eq('user_id',uid).order('data',{ascending:false}),
+      sb.from('pagamentos').select('*').eq('user_id',uid).order('data_pagamento',{ascending:false})
     ]);
 
-    const [rG, rP, rD] = await Promise.race([fetchData, timeout]);
+    const [rG, rP, rD, rPag] = await Promise.race([fetchData, timeout]);
 
-    // Sucesso — salva no cache offline e sai do modo offline
     gastos          = rG.data || [];
     patroes         = rP.data || [];
     diasTrabalhados = rD.data || [];
+    pagamentos      = rPag.data || [];
     saveOfflineCache(gastos, patroes, diasTrabalhados);
     setOfflineMode(false);
 
@@ -1319,28 +1489,22 @@ async function loadAllData(){
 (async()=>{
   let session = null;
   try {
-    // getSession pode travar sem internet — aplica timeout de 5s
     const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')),5000));
     const {data, error} = await Promise.race([sb.auth.getSession(), timeout]);
     if(error) throw error;
     session = data?.session || null;
+    if(session) console.log('✅ [Init] Sessão ativa:', session.user?.email);
   } catch(e) {
     console.warn('[Init] getSession falhou:', e.message);
-    // Sem internet — tenta usar sessão do localStorage diretamente
+    // Tenta recuperar sessão do localStorage pela chave fixa
     try {
-      const sbKey = Object.keys(localStorage).find(k=>k.startsWith('sb-') && k.includes('auth-token'));
-      if(sbKey){
-        const raw = JSON.parse(localStorage.getItem(sbKey));
-        // Supabase v2 armazena em access_token
-        if(raw?.access_token || raw?.currentSession?.access_token){
-          // Sessão existe localmente — permite modo offline
-          session = raw.currentSession || raw;
-        }
-      }
+      const raw = JSON.parse(localStorage.getItem('fin-auth-token') || 'null');
+      if(raw?.currentSession?.user) session = raw.currentSession;
+      else if(raw?.user) session = raw;
     } catch(_){}
-    // Limpa apenas se não conseguiu sessão local
+    // Se não achou sessão válida, limpa só a chave do app
     if(!session){
-      Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k));
+      localStorage.removeItem('fin-auth-token');
     }
   }
 
@@ -1395,8 +1559,9 @@ async function loadAllData(){
     }
     if(event==='SIGNED_OUT'){
       currentUser=null;
-      gastos=[];patroes=[];diasTrabalhados=[];activeWorker=null;
+      gastos=[];patroes=[];diasTrabalhados=[];pagamentos=[];activeWorker=null;
       setOfflineMode(false);
+      localStorage.removeItem('fin-auth-token');
       document.getElementById('main-app').classList.remove('visible');
       document.getElementById('auth-screen').classList.add('visible');
     }
