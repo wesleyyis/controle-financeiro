@@ -1441,6 +1441,127 @@ async function delWorkDay(id){
   renderExpenses();
 }
 
+// ── BACKUP COMPLETO ──
+async function exportBackup(){
+  // Inclui TUDO: gastos, patroes, dias trabalhados, pagamentos e config
+  const bk = {
+    version: 4,
+    exportedAt: new Date().toISOString(),
+    gastos,
+    patroes,
+    diasTrabalhados,
+    pagamentos,
+    cfg
+  };
+  const blob = new Blob([JSON.stringify(bk, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'backup-financas-' + new Date().toISOString().split('T')[0] + '.json';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('Backup exportado com sucesso!');
+}
+
+async function importBackup(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const bk = JSON.parse(e.target.result);
+      if(!confirm('Isso substituirá TODOS os dados atuais pelo backup.\n\nGastos, dias trabalhados, patrões e histórico de pagamentos serão restaurados.\n\nConfirmar?')) return;
+
+      showToast('Importando, aguarde...');
+      const uid = currentUser.id;
+
+      // ── 1. GASTOS ──
+      await sb.from('gastos').delete().eq('user_id', uid);
+      let gastosRows = [];
+      if(bk.gastos?.length){
+        gastosRows = bk.gastos.map(g=>({
+          nome:      g.nome      || g.name,
+          categoria: g.categoria || g.cat,
+          valor:     Number(g.valor || g.val),
+          data:      g.data      || g.date,
+          user_id:   uid
+        }));
+      } else if(bk.expData){
+        // compatibilidade com backup v2 (formato antigo)
+        Object.values(bk.expData).forEach(arr =>
+          arr.forEach(g => gastosRows.push({
+            nome: g.name, categoria: g.cat,
+            valor: Number(g.val), data: g.date, user_id: uid
+          }))
+        );
+      }
+      if(gastosRows.length) await sb.from('gastos').insert(gastosRows);
+
+      // ── 2. PATRÕES ──
+      await sb.from('patroes').delete().eq('user_id', uid);
+      let patraoRows = [];
+      if(bk.patroes?.length){
+        patraoRows = bk.patroes.map(p=>({ nome: p.nome, user_id: uid }));
+      } else if(bk.workers?.length){
+        // compatibilidade com backup v2
+        patraoRows = bk.workers.map(w=>({ nome: w, user_id: uid }));
+      }
+      if(patraoRows.length) await sb.from('patroes').insert(patraoRows);
+
+      // ── 3. DIAS TRABALHADOS ──
+      await sb.from('dias_trabalhados').delete().eq('user_id', uid);
+      let diasRows = [];
+      if(bk.diasTrabalhados?.length){
+        diasRows = bk.diasTrabalhados.map(d=>({
+          patrao: d.patrao,
+          data:   d.data,
+          valor:  Number(d.valor),
+          user_id: uid
+        }));
+      } else if(bk.workDays){
+        // compatibilidade com backup v2
+        Object.entries(bk.workDays).forEach(([key, arr]) => {
+          const patrao = key.split('|')[0];
+          arr.forEach(d => diasRows.push({
+            patrao, data: d.date, valor: Number(d.val), user_id: uid
+          }));
+        });
+      }
+      if(diasRows.length) await sb.from('dias_trabalhados').insert(diasRows);
+
+      // ── 4. PAGAMENTOS (histórico de baixas) ──
+      await sb.from('pagamentos').delete().eq('user_id', uid);
+      let pagRows = [];
+      if(bk.pagamentos?.length){
+        pagRows = bk.pagamentos.map(p=>({
+          patrao:         p.patrao,
+          valor:          Number(p.valor),
+          dias_count:     Number(p.dias_count || 0),
+          data_pagamento: p.data_pagamento,
+          ciclo_inicio:   p.ciclo_inicio,
+          ciclo_fim:      p.ciclo_fim,
+          observacao:     p.observacao || null,
+          user_id:        uid
+        }));
+      }
+      if(pagRows.length) await sb.from('pagamentos').insert(pagRows);
+
+      // ── 5. CONFIG ──
+      if(bk.cfg) cfg = bk.cfg;
+      localStorage.setItem('fin_cfg_'+uid, JSON.stringify(cfg));
+
+      // Recarrega tudo
+      await loadAllData();
+      showToast('✅ Backup restaurado com sucesso! Gastos, dias e histórico importados.');
+
+    } catch(err){
+      showToast('Erro ao importar. Verifique o arquivo.', true);
+      console.error('[importBackup]', err);
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
 // ── CARREGAR DADOS ──
 async function loadAllData(){
   const uid = currentUser.id;
