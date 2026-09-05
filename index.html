@@ -549,7 +549,17 @@ if('serviceWorker' in navigator){
   });
 }
 
-// ── CHAVES DE CACHE OFFLINE ──
+// ── MODO DESENVOLVIMENTO ──
+// Detecta automaticamente se está no localhost
+// No Netlify (produção) isso nunca ativa
+const MODO_DEV = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+// Usuário simulado para testes locais
+// NUNCA aparece em produção
+const DEV_USER = {
+  id: 'dev-user-local-test',
+  email: 'dev@teste.local'
+};
 const OFFLINE_KEY_GASTOS      = 'fin_offline_gastos';
 const OFFLINE_KEY_PATROES     = 'fin_offline_patroes';
 const OFFLINE_KEY_DIAS        = 'fin_offline_dias';
@@ -651,6 +661,18 @@ function showAuthErr(msg){const el=document.getElementById('auth-err');el.textCo
 async function doLogin(){
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
+
+  // ── MODO DEV: pula login no localhost ──
+  if(MODO_DEV){
+    console.log('🛠️ [DEV] Login bypassed — entrando como usuário de teste');
+    currentUser = DEV_USER;
+    document.getElementById('user-email-display').textContent = DEV_USER.email + ' (DEV)';
+    document.getElementById('auth-screen').classList.remove('visible');
+    document.getElementById('main-app').classList.add('visible');
+    await loadAllData();
+    return;
+  }
+
   if(!email||!pass){ showAuthErr('Preencha email e senha.'); return; }
 
   const btn = document.getElementById('btn-login');
@@ -807,7 +829,17 @@ function renderMetrics(items){
   const saldoIconEl = document.getElementById('metric-saldo-icon');
   const saldoStatusEl = document.getElementById('metric-saldo-status');
 
-  if(saldo >= 0){
+  // Se não há nenhum recebimento cadastrado, não mostra prejuízo — mostra neutro
+  const semRecebimentos = totalRecebido === 0;
+
+  if(semRecebimentos && totalGasto > 0){
+    saldoEl.className = 'mcard-val';
+    saldoEl.textContent = '—';
+    saldoIconEl.style.background = 'var(--bg4)';
+    saldoIconEl.style.color = 'var(--text3)';
+    saldoIconEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    saldoStatusEl.textContent = 'Registre dias trabalhados';
+  } else if(saldo >= 0){
     saldoEl.className = 'mcard-val green';
     saldoEl.textContent = fmtBRL(saldo);
     saldoIconEl.style.background = 'var(--green-bg)';
@@ -872,7 +904,15 @@ function renderExpenses(){
   let items=allInCycle
     .filter(g=>!filterCat||g.categoria===filterCat)
     .filter(g=>!search||g.nome.toLowerCase().includes(search)||g.categoria.toLowerCase().includes(search))
-    .sort((a,b)=>b.data.localeCompare(a.data));
+    .sort((a,b)=>{
+      // Ordena por data primeiro (mais recente no topo)
+      const dataDiff = b.data.localeCompare(a.data);
+      if(dataDiff !== 0) return dataDiff;
+      // Mesmo dia — usa created_at como desempate (último inserido no topo)
+      const aTime = a.created_at || a.id || '';
+      const bTime = b.created_at || b.id || '';
+      return bTime.localeCompare(aTime);
+    });
 
   document.getElementById('list-badge').textContent=items.length;
   const list=document.getElementById('expense-list');
@@ -939,6 +979,25 @@ async function addExpense(){
 
   const btn=document.getElementById('btn-add-exp');
   btn.disabled=true;btn.textContent='Salvando...';
+
+  // ── MODO DEV: salva no localStorage ──
+  if(MODO_DEV){
+    const row = {
+      id: 'dev-'+Date.now(),
+      nome, categoria, valor,
+      data: dataInput,
+      user_id: DEV_USER.id,
+      created_at: new Date().toISOString()
+    };
+    gastos.unshift(row);
+    saveOfflineCache(gastos, patroes, diasTrabalhados);
+    btn.disabled=false; btn.textContent='+ Adicionar gasto';
+    document.getElementById('exp-name').value='';
+    document.getElementById('exp-val').value='';
+    renderExpenses(); showToast('Gasto adicionado! (DEV)');
+    return;
+  }
+
   const {data:row,error}=await sb.from('gastos').insert([{nome,categoria,valor,data:dataInput,user_id:currentUser.id}]).select().single();
   btn.disabled=false;btn.textContent='+ Adicionar gasto';
   if(error){showToast('Erro ao salvar.',true);console.error(error);return}
@@ -998,47 +1057,6 @@ async function saveCycleDay(){
 }
 
 // ── BACKUP ──
-async function exportBackup(){
-  const bk={version:3,exportedAt:new Date().toISOString(),gastos,patroes,diasTrabalhados,cfg};
-  const blob=new Blob([JSON.stringify(bk,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='backup-financas-'+new Date().toISOString().split('T')[0]+'.json';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  showToast('Backup exportado!');
-}
-async function importBackup(input){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=async e=>{
-    try{
-      const bk=JSON.parse(e.target.result);
-      if(!confirm('Isso apagará os dados atuais e importará o backup. Confirmar?'))return;
-      showToast('Importando, aguarde...');
-      const uid=currentUser.id;
-      await sb.from('gastos').delete().eq('user_id',uid);
-      let gastosRows=[];
-      if(bk.gastos&&bk.gastos.length){
-        gastosRows=bk.gastos.map(g=>({nome:g.nome||g.name,categoria:g.categoria||g.cat,valor:Number(g.valor||g.val),data:g.data||g.date,user_id:uid}));
-      } else if(bk.expData){
-        Object.values(bk.expData).forEach(arr=>arr.forEach(g=>gastosRows.push({nome:g.name,categoria:g.cat,valor:Number(g.val),data:g.date,user_id:uid})));
-      }
-      if(gastosRows.length) await sb.from('gastos').insert(gastosRows);
-      await sb.from('patroes').delete().eq('user_id',uid);
-      let patraoRows=bk.patroes?bk.patroes.map(p=>({nome:p.nome,user_id:uid})):bk.workers?bk.workers.map(w=>({nome:w,user_id:uid})):[];
-      if(patraoRows.length) await sb.from('patroes').insert(patraoRows);
-      await sb.from('dias_trabalhados').delete().eq('user_id',uid);
-      let diasRows=[];
-      if(bk.diasTrabalhados&&bk.diasTrabalhados.length){diasRows=bk.diasTrabalhados.map(d=>({patrao:d.patrao,data:d.data,valor:Number(d.valor),user_id:uid}))}
-      else if(bk.workDays){Object.entries(bk.workDays).forEach(([k,arr])=>{const p=k.split('|')[0];arr.forEach(d=>diasRows.push({patrao:p,data:d.date,valor:Number(d.val),user_id:uid}))})}
-      if(diasRows.length) await sb.from('dias_trabalhados').insert(diasRows);
-      if(bk.cfg) cfg=bk.cfg;
-      localStorage.setItem('fin_cfg_'+uid,JSON.stringify(cfg));
-      await loadAllData();showToast('Backup restaurado com sucesso!');
-    }catch(err){showToast('Erro ao importar.',true);console.error(err)}
-  };
-  reader.readAsText(file);input.value='';
-}
 
 // ── TRABALHO ──
 function renderWorkerChips(){
@@ -1518,13 +1536,16 @@ async function importBackup(input){
           user_id: uid
         }));
       } else if(bk.workDays){
-        // compatibilidade com backup v2
+        // compatibilidade com backup v2 (formato antigo com workDays)
         Object.entries(bk.workDays).forEach(([key, arr]) => {
           const patrao = key.split('|')[0];
           arr.forEach(d => diasRows.push({
             patrao, data: d.date, valor: Number(d.val), user_id: uid
           }));
         });
+      } else {
+        // Backup antigo sem dias trabalhados — avisa o usuário
+        console.warn('[importBackup] Backup não contém dias trabalhados. Versão do backup:', bk.version || '?');
       }
       if(diasRows.length) await sb.from('dias_trabalhados').insert(diasRows);
 
@@ -1551,7 +1572,20 @@ async function importBackup(input){
 
       // Recarrega tudo
       await loadAllData();
-      showToast('✅ Backup restaurado com sucesso! Gastos, dias e histórico importados.');
+
+      // Monta mensagem detalhada do que foi restaurado
+      const resumo = [
+        gastosRows.length + ' gasto(s)',
+        patraoRows.length + ' patrão(ões)',
+        diasRows.length + ' dia(s) trabalhado(s)',
+        pagRows.length + ' pagamento(s)'
+      ].join(' · ');
+
+      if(diasRows.length === 0 && !bk.diasTrabalhados?.length){
+        showToast('⚠️ Backup restaurado, mas sem dias trabalhados. Exporte um backup novo para incluí-los.');
+      } else {
+        showToast('✅ Backup restaurado! ' + resumo);
+      }
 
     } catch(err){
       showToast('Erro ao importar. Verifique o arquivo.', true);
@@ -1566,13 +1600,28 @@ async function importBackup(input){
 async function loadAllData(){
   const uid = currentUser.id;
 
+  // ── MODO DEV: usa dados do localStorage local ──
+  if(MODO_DEV){
+    console.log('🛠️ [DEV] Carregando dados locais do localStorage');
+    const cache = loadOfflineCache();
+    gastos          = cache.gastos;
+    patroes         = cache.patroes;
+    diasTrabalhados = cache.diasTrabalhados;
+    pagamentos      = JSON.parse(localStorage.getItem('dev_pagamentos') || '[]');
+    activeWorker    = null;
+    cycleRef        = detectCurrentCycle();
+    document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+    renderExpenses(); renderWorkerChips(); renderWorkerPanel(); renderCycleConfig();
+    return;
+  }
+
   try {
     // Tenta buscar dados do Supabase com timeout de 8 segundos
     const timeout = new Promise((_, rej) =>
       setTimeout(() => rej(new Error('timeout')), 8000)
     );
     const fetchData = Promise.all([
-      sb.from('gastos').select('*').eq('user_id',uid).order('data',{ascending:false}),
+      sb.from('gastos').select('*').eq('user_id',uid).order('data',{ascending:false}).order('created_at',{ascending:false}),
       sb.from('patroes').select('*').eq('user_id',uid).order('nome'),
       sb.from('dias_trabalhados').select('*').eq('user_id',uid).order('data',{ascending:false}),
       sb.from('pagamentos').select('*').eq('user_id',uid).order('data_pagamento',{ascending:false})
@@ -1608,6 +1657,22 @@ async function loadAllData(){
 
 // ── INIT ──
 (async()=>{
+
+  // ── MODO DEV: entra direto sem login ──
+  if(MODO_DEV){
+    console.log('🛠️ [DEV] Modo desenvolvimento ativo — login automático');
+    document.getElementById('app-loader').style.display='none';
+    currentUser = DEV_USER;
+    document.getElementById('user-email-display').textContent = DEV_USER.email + ' (DEV)';
+    document.getElementById('auth-screen').classList.remove('visible');
+    document.getElementById('main-app').classList.add('visible');
+    // Mostra badge laranja de dev no header
+    const h1 = document.querySelector('.app-header h1');
+    if(h1) h1.innerHTML += ' <span style="font-size:11px;background:#92400e;color:#fef3c7;padding:2px 8px;border-radius:99px;font-weight:700;vertical-align:middle">DEV</span>';
+    await loadAllData();
+    return;
+  }
+
   let session = null;
   try {
     const timeout = new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')),5000));
