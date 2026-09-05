@@ -322,7 +322,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="auth-field"><label>DATA</label><input type="date" id="edit-data" class="inp"></div>
     <div class="auth-field">
       <label>CATEGORIA</label>
-      <select id="edit-cat" class="inp" <select id="edit-cat" class="inp" style="height:48px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b90a7' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 12px center;padding-right:32px">
+      <select id="edit-cat" class="inp" style="height:48px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b90a7' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px">
         <option>Alimentação</option><option>Transporte</option><option>Moradia</option>
         <option>Saúde</option><option>Educação</option><option>Lazer</option>
         <option>Compras</option><option>Contas</option><option>Outros</option>
@@ -1057,47 +1057,6 @@ async function saveCycleDay(){
 }
 
 // ── BACKUP ──
-async function exportBackup(){
-  const bk={version:3,exportedAt:new Date().toISOString(),gastos,patroes,diasTrabalhados,cfg};
-  const blob=new Blob([JSON.stringify(bk,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='backup-financas-'+new Date().toISOString().split('T')[0]+'.json';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  showToast('Backup exportado!');
-}
-async function importBackup(input){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=async e=>{
-    try{
-      const bk=JSON.parse(e.target.result);
-      if(!confirm('Isso apagará os dados atuais e importará o backup. Confirmar?'))return;
-      showToast('Importando, aguarde...');
-      const uid=currentUser.id;
-      await sb.from('gastos').delete().eq('user_id',uid);
-      let gastosRows=[];
-      if(bk.gastos&&bk.gastos.length){
-        gastosRows=bk.gastos.map(g=>({nome:g.nome||g.name,categoria:g.categoria||g.cat,valor:Number(g.valor||g.val),data:g.data||g.date,user_id:uid}));
-      } else if(bk.expData){
-        Object.values(bk.expData).forEach(arr=>arr.forEach(g=>gastosRows.push({nome:g.name,categoria:g.cat,valor:Number(g.val),data:g.date,user_id:uid})));
-      }
-      if(gastosRows.length) await sb.from('gastos').insert(gastosRows);
-      await sb.from('patroes').delete().eq('user_id',uid);
-      let patraoRows=bk.patroes?bk.patroes.map(p=>({nome:p.nome,user_id:uid})):bk.workers?bk.workers.map(w=>({nome:w,user_id:uid})):[];
-      if(patraoRows.length) await sb.from('patroes').insert(patraoRows);
-      await sb.from('dias_trabalhados').delete().eq('user_id',uid);
-      let diasRows=[];
-      if(bk.diasTrabalhados&&bk.diasTrabalhados.length){diasRows=bk.diasTrabalhados.map(d=>({patrao:d.patrao,data:d.data,valor:Number(d.valor),user_id:uid}))}
-      else if(bk.workDays){Object.entries(bk.workDays).forEach(([k,arr])=>{const p=k.split('|')[0];arr.forEach(d=>diasRows.push({patrao:p,data:d.date,valor:Number(d.val),user_id:uid}))})}
-      if(diasRows.length) await sb.from('dias_trabalhados').insert(diasRows);
-      if(bk.cfg) cfg=bk.cfg;
-      localStorage.setItem('fin_cfg_'+uid,JSON.stringify(cfg));
-      await loadAllData();showToast('Backup restaurado com sucesso!');
-    }catch(err){showToast('Erro ao importar.',true);console.error(err)}
-  };
-  reader.readAsText(file);input.value='';
-}
 
 // ── TRABALHO ──
 function renderWorkerChips(){
