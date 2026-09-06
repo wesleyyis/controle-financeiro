@@ -761,7 +761,8 @@ function cycleLabelStr(y,m){
 }
 function gastosDoCiclo(y,m){
   const s=cycleStart(y,m),e=cycleEnd(y,m);
-  return gastos.filter(g=>{const d=new Date(g.data+'T12:00:00');return d>=s&&d<=e;});
+  return gastos.filter(g=>{const d=new Date(g.data+'T12:00:00');return d>=s&&d<=e;})
+    .map(g=>({...g, valor: Number(g.valor)})); // garante que valor é sempre número
 }
 
 // ── MÉTRICAS + GRÁFICOS ──
@@ -1497,11 +1498,11 @@ async function importBackup(input){
       let gastosRows = [];
       if(bk.gastos?.length){
         gastosRows = bk.gastos.map(g=>({
-          nome:      g.nome      || g.name,
-          categoria: g.categoria || g.cat,
-          valor:     Number(g.valor || g.val),
-          data:      g.data      || g.date,
-          user_id:   uid
+          nome:      g.nome      || g.name  || 'Sem nome',
+          categoria: g.categoria || g.cat   || 'Outros',
+          valor:     Number(g.valor || g.val || 0),
+          data:      g.data      || g.date  || new Date().toISOString().split('T')[0],
+          user_id:   uid  // sempre usa o uid do usuário logado, ignora o do backup
         }));
       } else if(bk.expData){
         // compatibilidade com backup v2 (formato antigo)
