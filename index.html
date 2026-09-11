@@ -1001,7 +1001,13 @@ async function addExpense(){
 
   const {data:row,error}=await sb.from('gastos').insert([{nome,categoria,valor,data:dataInput,user_id:currentUser.id}]).select().single();
   btn.disabled=false;btn.textContent='+ Adicionar gasto';
-  if(error){showToast('Erro ao salvar.',true);console.error(error);return}
+  if(error){
+    console.error('❌ Erro ao salvar gasto:', error);
+    console.log('user_id usado:', currentUser.id);
+    showToast('Erro ao salvar: '+error.message,true);
+    return;
+  }
+  console.log('✅ Gasto salvo com user_id:', currentUser.id);
   gastos.push(row);
   document.getElementById('exp-name').value='';
   document.getElementById('exp-val').value='';
