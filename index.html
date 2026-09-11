@@ -906,10 +906,9 @@ function renderExpenses(){
     .filter(g=>!filterCat||g.categoria===filterCat)
     .filter(g=>!search||g.nome.toLowerCase().includes(search)||g.categoria.toLowerCase().includes(search))
     .sort((a,b)=>{
-      // Ordena por data primeiro (mais recente no topo)
       const dataDiff = b.data.localeCompare(a.data);
       if(dataDiff !== 0) return dataDiff;
-      // Mesmo dia — usa created_at como desempate (último inserido no topo)
+      // Desempate: created_at se existir, senão id
       const aTime = a.created_at || a.id || '';
       const bTime = b.created_at || b.id || '';
       return bTime.localeCompare(aTime);
@@ -1628,7 +1627,7 @@ async function loadAllData(){
       setTimeout(() => rej(new Error('timeout')), 8000)
     );
     const fetchData = Promise.all([
-      sb.from('gastos').select('*').eq('user_id',uid).order('data',{ascending:false}).order('created_at',{ascending:false}),
+      sb.from('gastos').select('*').eq('user_id',uid).order('data',{ascending:false}),
       sb.from('patroes').select('*').eq('user_id',uid).order('nome'),
       sb.from('dias_trabalhados').select('*').eq('user_id',uid).order('data',{ascending:false}),
       sb.from('pagamentos').select('*').eq('user_id',uid).order('data_pagamento',{ascending:false})
